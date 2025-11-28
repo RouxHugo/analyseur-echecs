@@ -1,2 +1,0 @@
-# analyseur-echecs
-analyseur-echecs
