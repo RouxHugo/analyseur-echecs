@@ -138,6 +138,8 @@
         }
 
         // Configuration de l'échiquier
+                    const pieceTheme = 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/img/chesspieces/wikipedia/{piece}.png';
+
         const config = {
             draggable: true,
             position: 'start',
@@ -156,7 +158,6 @@
             // chessboard.js ne le fait pas automatiquement, nous devons le faire manuellement
             const sparePiecesContainer = $('#sparePieces');
             const pieces = ['wP', 'wN', 'wB', 'wR', 'wQ', 'wK', 'bP', 'bN', 'bB', 'bR', 'bQ', 'bK'];
-            const pieceTheme = 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/img/chesspieces/wikipedia/{piece}.png';
             
             pieces.forEach(piece => {
                 const img = $('<img>');
@@ -285,4 +286,5 @@
 </body>
 
 </html>
+
 
