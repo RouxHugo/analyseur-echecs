@@ -33,16 +33,20 @@
         }
     </style>
 </head>
-<body class="bg-gray-900 text-white flex flex-col items-center justify-center p-4 min-h-full">
+
+<body class="bg-gray-900 text-white flex flex-col items-center p-4 min-h-full">
+
+    <div class="w-full max-w-4xl mx-auto text-center mb-6">
+        <h1 class="text-3xl font-bold mb-4">Analyseur d'Échecs</h1>
+        <p class="text-gray-300">
+            Placez les pièces sur l'échiquier (utilisez les pièces sur le côté), 
+            choisissez le trait, puis cliquez sur "Analyser".
+        </p>
+    </div>
 
     <div class="w-full max-w-4xl mx-auto flex flex-col lg:flex-row gap-6">
 
         <div class="lg:w-1/2 w-full">
-            <h1 class="text-3xl font-bold text-center mb-4">Analyseur d'Échecs</h1>
-            <p class="text-center text-gray-300 mb-4">
-                Placez les pièces sur l'échiquier (utilisez les pièces sur le côté), 
-                choisissez le trait, puis cliquez sur "Analyser".
-            </p>
             
             <div id="board" class="w-full max-w-md mx-auto"></div>
             
@@ -51,8 +55,7 @@
             </div>
         </div>
 
-        <div class="lg:w-1/2 w-full lg:mt-20">
-            <div class="bg-gray-800 p-4 rounded-lg shadow-lg">
+        <div class="lg:w-1/2 w-full"> <div class="bg-gray-800 p-4 rounded-lg shadow-lg">
                 <h2 class="text-xl font-semibold mb-3">Contrôles</h2>
                 <div class="flex flex-wrap gap-2 mb-4">
                     <button id="startButton" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200">
@@ -97,197 +100,192 @@
         </div>
 
     </div>
+</body>
+<script type="module">
+    // Initialisation de la logique du jeu (chess.js)
+    const game = new Chess();
+    
+    // Variable pour l'échiquier (chessboard.js)
+    let board = null;
 
-    <script type="module">
-        // Initialisation de la logique du jeu (chess.js)
-        const game = new Chess();
+    // Met à jour le champ FEN lorsque la position change
+    function updateFenInput() {
+        // board.fen() donne seulement les pièces. Nous construisons le FEN partiel.
+        const pieceFEN = board.fen();
+        const turn = $('input[name="turn"]:checked').val();
+        // C'est un FEN partiel, suffisant pour l'analyse. 
+        // On suppose pas de roque, pas de prise en passant pour les positions personnalisées.
+        const partialFEN = `${pieceFEN} ${turn} - - 0 1`;
         
-        // Variable pour l'échiquier (chessboard.js)
-        let board = null;
-
-        // Met à jour le champ FEN lorsque la position change
-        function updateFenInput() {
-            // board.fen() donne seulement les pièces. Nous construisons le FEN partiel.
-            const pieceFEN = board.fen();
-            const turn = $('input[name="turn"]:checked').val();
-            // C'est un FEN partiel, suffisant pour l'analyse. 
-            // On suppose pas de roque, pas de prise en passant pour les positions personnalisées.
-            const partialFEN = `${pieceFEN} ${turn} - - 0 1`;
-            
-            // On le charge dans chess.js pour validation et pour obtenir un FEN complet
-            if (game.load(partialFEN)) {
-                $('#fen').val(game.fen());
-            } else {
-                // Si la position est invalide (ex: 2 rois blancs), on affiche le FEN des pièces
-                $('#fen').val(pieceFEN);
-            }
+        // On le charge dans chess.js pour validation et pour obtenir un FEN complet
+        if (game.load(partialFEN)) {
+            $('#fen').val(game.fen());
+        } else {
+            // Si la position est invalide (ex: 2 rois blancs), on affiche le FEN des pièces
+            $('#fen').val(pieceFEN);
         }
+    }
 
-        // Gère le dépôt d'une pièce sur l'échiquier
-        function onDrop(source, target, piece, newPos, oldPos, orientation) {
-            // Mettre à jour l'état interne de l'échiquier
-            // 'this' ne fait pas référence à l'instance de Chessboard ici.
-            // Nous devons utiliser la variable 'board' définie en dehors.
-            board.position(newPos); 
-            updateFenInput();
-        }
+    // Gère le dépôt d'une pièce sur l'échiquier
+    function onDrop(source, target, piece, newPos, oldPos, orientation) {
+        // Mettre à jour l'état interne de l'échiquier
+        // 'this' ne fait pas référence à l'instance de Chessboard ici.
+        // Nous devons utiliser la variable 'board' définie en dehors.
+        board.position(newPos); 
+        updateFenInput();
+    }
 
-        // Gère un mouvement sur l'échiquier (ne devrait pas arriver avec sparePieces, mais par sécurité)
-        function onChange(oldPos, newPos) {
-            updateFenInput();
-        }
+    // Gère un mouvement sur l'échiquier (ne devrait pas arriver avec sparePieces, mais par sécurité)
+    function onChange(oldPos, newPos) {
+        updateFenInput();
+    }
 
-        // Configuration de l'échiquier
-                    const pieceTheme = 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/img/chesspieces/wikipedia/{piece}.png';
+    // Définir le thème des pièces AVANT la config
+    const pieceTheme = 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/img/chesspieces/wikipedia/{piece}.png';
 
-        const config = {
-    draggable: true,
-    position: 'start',
-    dropOffBoard: 'trash', // Permet de retirer les pièces en les glissant hors de l'échiquier
-    sparePieces: true,     // Affiche les pièces sur le côté pour les ajouter
-    onDrop: onDrop,
-    onChange: onChange,
-    pieceTheme: pieceTheme  // <-- AJOUTEZ CETTE LIGNE
-};
+    // Configuration de l'échiquier
+    const config = {
+        draggable: true,
+        position: 'start',
+        dropOffBoard: 'trash', // Permet de retirer les pièces en les glissant hors de l'échiquier
+        sparePieces: true,     // Affiche les pièces sur le côté pour les ajouter
+        onDrop: onDrop,
+        onChange: onChange,
+        pieceTheme: pieceTheme  // C'est la ligne importante pour les images !
+    };
+    
+    // Initialiser l'échiquier
+    // Nous le faisons dans un $(document).ready pour s'assurer que le DOM est chargé
+    $(document).ready(function() {
+        board = Chessboard('board', config);
         
-        // Initialiser l'échiquier
-        // Nous le faisons dans un $(document).ready pour s'assurer que le DOM est chargé
-        $(document).ready(function() {
-            board = Chessboard('board', config);
-            
-            // Initialiser les pièces détachées
-            // chessboard.js ne le fait pas automatiquement, nous devons le faire manuellement
-            const sparePiecesContainer = $('#sparePieces');
-            const pieces = ['wP', 'wN', 'wB', 'wR', 'wQ', 'wK', 'bP', 'bN', 'bB', 'bR', 'bQ', 'bK'];
-            
-            pieces.forEach(piece => {
-                const img = $('<img>');
-                img.attr('src', pieceTheme.replace('{piece}', piece));
-                img.attr('data-piece', piece);
-                img.addClass('piece-417db'); // Classe CSS interne de chessboard.js
-                img.css('width', '45px');
-                img.css('height', '45px');
-                img.css('display', 'inline-block');
-                img.css('cursor', 'grab');
-                sparePiecesContainer.append(img);
-            });
-            
-            // Mettre à jour le FEN initial
+        // Initialiser les pièces détachées
+        // chessboard.js ne le fait pas automatiquement, nous devons le faire manuellement
+        const sparePiecesContainer = $('#sparePieces');
+        const pieces = ['wP', 'wN', 'wB', 'wR', 'wQ', 'wK', 'bP', 'bN', 'bB', 'bR', 'bQ', 'bK'];
+        
+        pieces.forEach(piece => {
+            const img = $('<img>');
+            img.attr('src', pieceTheme.replace('{piece}', piece));
+            img.attr('data-piece', piece);
+            img.addClass('piece-417db'); // Classe CSS interne de chessboard.js
+            img.css('width', '45px');
+            img.css('height', '45px');
+            img.css('display', 'inline-block');
+            img.css('cursor', 'grab');
+            sparePiecesContainer.append(img);
+        });
+        
+        // Mettre à jour le FEN initial
+        updateFenInput();
+        
+        // Gérer les clics sur les boutons
+        $('#startButton').on('click', function() {
+            board.position('start');
             updateFenInput();
-            
-            // Gérer les clics sur les boutons
-            $('#startButton').on('click', function() {
-                board.position('start');
-                updateFenInput();
-            });
-
-            $('#clearButton').on('click', function() {
-                board.clear();
-                updateFenInput();
-            });
-            
-            // Gérer le changement de tour
-            $('input[name="turn"]').on('change', updateFenInput);
-
-            // Gérer le clic sur le bouton d'analyse
-            $('#analyzeButton').on('click', async function() {
-                const resultDiv = $('#analysisResult');
-                resultDiv.html('<p class="text-blue-300 animate-pulse">Analyse en cours, veuillez patienter...</p>');
-
-                // Mettre à jour le FEN une dernière fois
-                updateFenInput();
-                const currentFEN = $('#fen').val();
-                
-                // Valider le FEN avec chess.js
-                if (!game.load(currentFEN)) {
-                    resultDiv.html('<p class="text-red-400">Position invalide. (Ex: Rois en échec mutuel, plus d\'un roi, etc.)</p>');
-                    return;
-                }
-                
-                // Le FEN est valide, on le prend de game.fen() pour être sûr
-                const validFEN = game.fen();
-                const turn = game.turn() === 'w' ? 'Blancs' : 'Noirs';
-
-                try {
-                    // Appel à l'API cloud de Lichess
-                    // Note : Cette API est gratuite et ne nécessite pas de clé
-                    const response = await fetch('https://lichess.org/api/cloud-eval?fen=' + encodeURIComponent(validFEN));
-                    
-                    if (!response.ok) {
-                        throw new Error(`Erreur HTTP: ${response.status}`);
-                    }
-                    
-                    const data = await response.json();
-
-                    if (data.error) {
-                        resultDiv.html(`<p class="text-yellow-400">Analyse non trouvée pour cette position (ou erreur) : ${data.error}</p>`);
-                    } else if (data.pvs && data.pvs.length > 0) {
-                        // L'API a trouvé une analyse
-                        
-                        let htmlResult = `<p class="text-lg mb-2">Principales variations pour les <strong>${turn}</strong> :</p>`;
-                        htmlResult += '<ol class="list-decimal list-inside space-y-2">';
-
-                        // On boucle sur les variations (PVs) reçues
-                        data.pvs.forEach((pv, index) => {
-                            const bestMoveUCI = pv.moves.split(' ')[0];
-                            let evalText = '';
-                            
-                            if (pv.mate) {
-                                evalText = `Mat en <strong>${pv.mate}</strong> coups`;
-                            } else if (pv.cp) {
-                                const evaluation = pv.cp / 100.0;
-                                // Ajoute un '+' pour les évaluations positives
-                                const sign = evaluation > 0 ? '+' : '';
-                                evalText = `Éval : <strong>${sign}${evaluation.toFixed(2)}</strong>`;
-                            } else {
-                                evalText = 'Éval : <strong>0.00</strong>';
-                            }
-
-                            // Utiliser chess.js pour convertir le coup UCI (ex: e2e4) en notation SAN (ex: e4)
-                            const move = game.move({
-                                from: bestMoveUCI.substring(0, 2),
-                                to: bestMoveUCI.substring(2, 4),
-                                promotion: bestMoveUCI.length === 5 ? bestMoveUCI.substring(4) : undefined
-                            });
-
-                            if (move) {
-                                const bestMoveSAN = move.san;
-                                const isBestMove = index === 0;
-                                
-                                // Appliquer la couleur verte et le gras pour le meilleur coup
-                                if (isBestMove) {
-                                    htmlResult += `<li class="text-green-400 font-bold">`;
-                                    htmlResult += `<span>${bestMoveSAN}</span> <span class="text-gray-300 text-sm">(${evalText})</span>`;
-                                } else {
-                                    htmlResult += `<li>`;
-                                    htmlResult += `<span>${bestMoveSAN}</span> <span class="text-gray-400 text-sm">(${evalText})</span>`;
-                                }
-                                htmlResult += `</li>`;
-                                
-                                // On annule le coup dans notre logique interne pour que le FEN reste correct
-                                game.undo(); 
-                            }
-                        });
-
-                        htmlResult += '</ol>';
-                        resultDiv.html(htmlResult);
-                        
-                    } else {
-                        resultDiv.html('<p class="text-yellow-400">Aucune analyse n\'a été trouvée dans le cloud pour cette position exacte.</p>');
-                    }
-                    
-                } catch (error) {
-                    console.error("Erreur lors de l'appel API:", error);
-                    resultDiv.html(`<p class="text-red-400">Impossible de contacter le serveur d'analyse. Vérifiez votre connexion internet. (${error.message})</p>`);
-                }
-            });
         });
 
-    </script>
-</body>
+        $('#clearButton').on('click', function() {
+            board.clear();
+            updateFenInput();
+        });
+        
+        // Gérer le changement de tour
+        $('input[name="turn"]').on('change', updateFenInput);
 
+        // Gérer le clic sur le bouton d'analyse
+        $('#analyzeButton').on('click', async function() {
+            const resultDiv = $('#analysisResult');
+            resultDiv.html('<p class="text-blue-300 animate-pulse">Analyse en cours, veuillez patienter...</p>');
+
+            // Mettre à jour le FEN une dernière fois
+            updateFenInput();
+            const currentFEN = $('#fen').val();
+            
+            // Valider le FEN avec chess.js
+            if (!game.load(currentFEN)) {
+                resultDiv.html('<p class="text-red-400">Position invalide. (Ex: Rois en échec mutuel, plus d\'un roi, etc.)</p>');
+                return;
+            }
+            
+            // Le FEN est valide, on le prend de game.fen() pour être sûr
+            const validFEN = game.fen();
+            const turn = game.turn() === 'w' ? 'Blancs' : 'Noirs';
+
+            try {
+                // Appel à l'API cloud de Lichess
+                // Note : Cette API est gratuite et ne nécessite pas de clé
+                const response = await fetch('https://lichess.org/api/cloud-eval?fen=' + encodeURIComponent(validFEN));
+                
+                if (!response.ok) {
+                    throw new Error(`Erreur HTTP: ${response.status}`);
+                }
+                
+                const data = await response.json();
+
+                if (data.error) {
+                    resultDiv.html(`<p class="text-yellow-400">Analyse non trouvée pour cette position (ou erreur) : ${data.error}</p>`);
+                } else if (data.pvs && data.pvs.length > 0) {
+                    // L'API a trouvé une analyse
+                    
+                    let htmlResult = `<p class="text-lg mb-2">Principales variations pour les <strong>${turn}</strong> :</p>`;
+                    htmlResult += '<ol class="list-decimal list-inside space-y-2">';
+
+                    // On boucle sur les variations (PVs) reçues
+                    data.pvs.forEach((pv, index) => {
+                        const bestMoveUCI = pv.moves.split(' ')[0];
+                        let evalText = '';
+                        
+                        if (pv.mate) {
+                            evalText = `Mat en <strong>${pv.mate}</strong> coups`;
+                        } else if (pv.cp) {
+                            const evaluation = pv.cp / 100.0;
+                            // Ajoute un '+' pour les évaluations positives
+                            const sign = evaluation > 0 ? '+' : '';
+                            evalText = `Éval : <strong>${sign}${evaluation.toFixed(2)}</strong>`;
+                        } else {
+                            evalText = 'Éval : <strong>0.00</strong>';
+                        }
+
+                        // Utiliser chess.js pour convertir le coup UCI (ex: e2e4) en notation SAN (ex: e4)
+                        const move = game.move({
+                            from: bestMoveUCI.substring(0, 2),
+                            to: bestMoveUCI.substring(2, 4),
+                            promotion: bestMoveUCI.length === 5 ? bestMoveUCI.substring(4) : undefined
+                        });
+
+                        if (move) {
+                            const bestMoveSAN = move.san;
+                            const isBestMove = index === 0;
+                            
+                            // Appliquer la couleur verte et le gras pour le meilleur coup
+                            if (isBestMove) {
+                                htmlResult += `<li class="text-green-400 font-bold">`;
+                                htmlResult += `<span>${bestMoveSAN}</span> <span class="text-gray-300 text-sm">(${evalText})</span>`;
+                            } else {
+                                htmlResult += `<li>`;
+                                htmlResult += `<span>${bestMoveSAN}</span> <span class="text-gray-400 text-sm">(${evalText})</span>`;
+                            }
+                            htmlResult += `</li>`;
+                            
+                            // On annule le coup dans notre logique interne pour que le FEN reste correct
+                            game.undo(); 
+                        }
+                    });
+
+                    htmlResult += '</ol>';
+                    resultDiv.html(htmlResult);
+                    
+                } else {
+                    resultDiv.html('<p class="text-yellow-400">Aucune analyse n\'a été trouvée dans le cloud pour cette position exacte.</p>');
+                }
+                
+            } catch (error) {
+                console.error("Erreur lors de l'appel API:", error);
+                resultDiv.html(`<p class="text-red-400">Impossible de contacter le serveur d'analyse. Vérifiez votre connexion internet. (${error.message})</p>`);
+            }
+        });
+    });
+
+</script>
 </html>
-
-
-
-
