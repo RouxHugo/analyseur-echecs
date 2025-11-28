@@ -180,12 +180,14 @@
             // ### 2. Initialisation de l'Échiquier (UI) ###
             
             var config = {
-                draggable: true, // Les pièces sont déplaçables
-                position: 'start', // Position de départ
-                sparePieces: true, // AFFICHE la zone "différents pions" !
-                dropOffBoard: 'trash', // Permet de supprimer des pièces en les glissant hors du plateau
-                onChange: onBoardChange // Appelé quand la position change
-            };
+    draggable: true, 
+    position: 'start', 
+    sparePieces: true, 
+    dropOffBoard: 'trash', 
+    onChange: onBoardChange,
+                *
+    pieceTheme: 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/img/chesspieces/wikipedia/{piece}.png'
+};
             board = Chessboard('echiquier', config);
 
             // Met à jour la logique du jeu (chess.js) quand l'échiquier (chessboard.js) change
@@ -241,4 +243,5 @@
 
 </body>
 </html>
+
 
