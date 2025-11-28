@@ -141,13 +141,14 @@
                     const pieceTheme = 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/img/chesspieces/wikipedia/{piece}.png';
 
         const config = {
-            draggable: true,
-            position: 'start',
-            dropOffBoard: 'trash', // Permet de retirer les pièces en les glissant hors de l'échiquier
-            sparePieces: true,     // Affiche les pièces sur le côté pour les ajouter
-            onDrop: onDrop,
-            onChange: onChange
-        };
+    draggable: true,
+    position: 'start',
+    dropOffBoard: 'trash', // Permet de retirer les pièces en les glissant hors de l'échiquier
+    sparePieces: true,     // Affiche les pièces sur le côté pour les ajouter
+    onDrop: onDrop,
+    onChange: onChange,
+    pieceTheme: pieceTheme  // <-- AJOUTEZ CETTE LIGNE
+};
         
         // Initialiser l'échiquier
         // Nous le faisons dans un $(document).ready pour s'assurer que le DOM est chargé
@@ -286,5 +287,6 @@
 </body>
 
 </html>
+
 
 
