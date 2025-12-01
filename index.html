@@ -134,7 +134,11 @@
         $(document).ready(function() {
             var board = null; // L'objet échiquier (UI)
             var game = new Chess(); // L'objet logique du jeu (règles)
-            var stockfish = new Worker('js/stockfish.js');
+            
+            // ### MODIFICATION IMPORTANTE ###
+            // On pointe vers le bon fichier "lite-single" que vous avez pu uploader
+            var stockfish = new Worker('js/stockfish-17.1-lite-single-03e3232.js');
+            
             var bestMoves = {}; // Pour stocker les 3 meilleurs coups
 
             // ### 1. Initialisation de Stockfish (le moteur d'analyse) ###
@@ -180,13 +184,13 @@
             // ### 2. Initialisation de l'Échiquier (UI) ###
             
             var config = {
-    draggable: true, 
-    position: 'start', 
-    sparePieces: true, 
-    dropOffBoard: 'trash', 
-    onChange: onBoardChange,
-    pieceTheme: 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/img/chesspieces/wikipedia/{piece}.png'
-};
+                draggable: true, 
+                position: 'start', 
+                sparePieces: true, 
+                dropOffBoard: 'trash', 
+                onChange: onBoardChange,
+                pieceTheme: 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/img/chesspieces/wikipedia/{piece}.png'
+            };
             board = Chessboard('echiquier', config);
 
             // Met à jour la logique du jeu (chess.js) quand l'échiquier (chessboard.js) change
@@ -242,6 +246,3 @@
 
 </body>
 </html>
-
-
-
