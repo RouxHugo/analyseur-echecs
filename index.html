@@ -129,6 +129,7 @@
             var stockfish = new Worker('js/stockfish-17.1-lite-single-03e3232.js');
             var bestMoves = {};
 
+            // ### Stockfish setup ###
             stockfish.postMessage('uci');
             stockfish.postMessage('setoption name MultiPV value 3');
             stockfish.postMessage('isready');
@@ -158,24 +159,37 @@
                 }
             };
 
+            // ### Chessboard configuration ###
             var config = {
                 draggable: true, 
                 position: 'start', 
                 sparePieces: true, 
                 dropOffBoard: 'trash', 
-                onChange: onBoardChange,
+                onDrop: onPieceDrop,
+                onSnapEnd: onSnapEnd,
                 pieceTheme: 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/img/chesspieces/alpha/{piece}.png'
             };
             board = Chessboard('echiquier', config);
 
-            function onBoardChange(oldPos, newPos) {
-                var fen = board.fen();
-                var turn = $('input[name="tour"]:checked').val();
-                game.load(fen + ' ' + turn + ' - - 0 1');
+            // Déplacement des pièces (board et spare)
+            function onPieceDrop(source, target, piece, newPos, oldPos, orientation) {
+                var move = game.move({
+                    from: source,
+                    to: target,
+                    promotion: 'q'
+                });
+                if (move === null) return 'snapback';
             }
 
+            // Synchronisation après le déplacement
+            function onSnapEnd() {
+                board.position(game.fen());
+            }
+
+            // ### Boutons ###
             $('#resetBtn').on('click', function() {
                 board.start();
+                game.reset();
                 $('#move1').text('1. (en attente)');
                 $('#move2').text('2. (en attente)');
                 $('#move3').text('3. (en attente)');
