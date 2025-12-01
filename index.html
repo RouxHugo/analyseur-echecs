@@ -26,15 +26,12 @@
             margin-right: 20px;
         }
 
-        /* Le conteneur de l'échiquier */
         #echiquier {
-            width: 450px; /* Taille de l'échiquier */
+            width: 450px;
             border: 2px solid black;
             box-sizing: border-box;
         }
 
-        /* La zone "différents pions" est gérée par chessboard.js (sparePieces) */
-        /* On style le conteneur qu'il va créer */
         .spare-pieces-7492f {
             border: 2px solid black;
             padding: 8px;
@@ -50,7 +47,6 @@
             width: 220px;
         }
 
-        /* Style générique pour les boutons et affichages de la sidebar */
         .sidebar-item {
             border: 2px solid black;
             padding: 12px;
@@ -69,14 +65,12 @@
             background-color: #f5f5f5;
         }
 
-        /* Le sélecteur de tour */
         .tour-select {
             display: flex;
             justify-content: space-around;
             align-items: center;
         }
 
-        /* Les suggestions de coups */
         .move-suggestion {
             background-color: #f9f9f9;
             font-family: 'Courier New', Courier, monospace;
@@ -97,10 +91,9 @@
     <div class="container">
         <div class="main-content">
             <div id="echiquier"></div>
-            </div>
+        </div>
 
         <div class="sidebar">
-            
             <button id="resetBtn" class="sidebar-item">Reset Échiquier</button>
 
             <div class="sidebar-item tour-select">
@@ -130,117 +123,84 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.min.js"></script>
 
     <script>
-        // Attend que le document soit prêt
         $(document).ready(function() {
-            var board = null; // L'objet échiquier (UI)
-            var game = new Chess(); // L'objet logique du jeu (règles)
-            
-            // ### MODIFICATION IMPORTANTE ###
-            // On pointe vers le bon fichier "lite-single" que vous avez pu uploader
+            var board = null;
+            var game = new Chess();
             var stockfish = new Worker('js/stockfish-17.1-lite-single-03e3232.js');
-            
-            var bestMoves = {}; // Pour stocker les 3 meilleurs coups
+            var bestMoves = {};
 
-            // ### 1. Initialisation de Stockfish (le moteur d'analyse) ###
-            
-            // On prépare le moteur
-            stockfish.postMessage('uci'); // Initialise le moteur
-            stockfish.postMessage('setoption name MultiPV value 3'); // Demande les 3 meilleurs coups
+            stockfish.postMessage('uci');
+            stockfish.postMessage('setoption name MultiPV value 3');
             stockfish.postMessage('isready');
 
-            // Gère les messages reçus du moteur
             stockfish.onmessage = function(event) {
                 var message = event.data;
-                console.log(message); // Utile pour le débogage
+                console.log(message);
 
                 if (message === 'readyok') {
                     $('#engineStatus').text('Moteur prêt.');
                 }
 
-                // Analyse la ligne "info" de Stockfish
                 if (message.startsWith('info') && message.includes('multipv')) {
-                    // Extrait les informations avec une expression régulière
                     var match = message.match(/multipv (\d+) score (cp|mate) (-?\d+) pv (\w+)/);
                     if (match) {
-                        var multipv = parseInt(match[1]); // Le classement (1, 2, ou 3)
-                        var type = match[2]; // 'cp' (centipawn) ou 'mate'
-                        var score = parseInt(match[3]); // Le score
-                        var move = match[4]; // Le coup (ex: e2e4)
-
-                        // Formate le score
+                        var multipv = parseInt(match[1]);
+                        var type = match[2];
+                        var score = parseInt(match[3]);
+                        var move = match[4];
                         var scoreText = (type === 'cp') ? (score / 100).toFixed(2) : `Mat en ${score}`;
-                        
-                        // Met à jour l'affichage
                         $('#move' + multipv).text(multipv + '. ' + move + ' (' + scoreText + ')');
                     }
                 }
 
-                // Quand l'analyse est finie
                 if (message.startsWith('bestmove')) {
                     $('#engineStatus').text('Analyse terminée.');
                 }
             };
 
-            // ### 2. Initialisation de l'Échiquier (UI) ###
-            
             var config = {
                 draggable: true, 
                 position: 'start', 
                 sparePieces: true, 
                 dropOffBoard: 'trash', 
                 onChange: onBoardChange,
-                pieceTheme: 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/img/chesspieces/wikipedia/{piece}.png'
+                pieceTheme: 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/img/chesspieces/alpha/{piece}.png'
             };
             board = Chessboard('echiquier', config);
 
-            // Met à jour la logique du jeu (chess.js) quand l'échiquier (chessboard.js) change
             function onBoardChange(oldPos, newPos) {
-                // On met à jour l'objet 'game' avec la nouvelle position FEN
                 var fen = board.fen();
                 var turn = $('input[name="tour"]:checked').val();
-                game.load(fen + ' ' + turn + ' - - 0 1'); // Met à jour le FEN complet
+                game.load(fen + ' ' + turn + ' - - 0 1');
             }
 
-            // ### 3. Gestion des Événements (Boutons) ###
-
-            // Bouton "Reset Échiquier"
             $('#resetBtn').on('click', function() {
-                board.start(); // Réinitialise l'échiquier à la position de départ
+                board.start();
                 $('#move1').text('1. (en attente)');
                 $('#move2').text('2. (en attente)');
                 $('#move3').text('3. (en attente)');
                 $('#engineStatus').text('Moteur prêt.');
             });
 
-            // Bouton "Meilleur coup" (Analyse)
             $('#analyzeBtn').on('click', function() {
-                // Récupère la position actuelle (au format FEN)
                 var fen = board.fen();
                 var turn = $('input[name="tour"]:checked').val();
-                
-                // Construit le FEN complet
-                // (Le FEN de chessboard.js ne contient que la position des pièces)
                 var fullFen = fen + ' ' + turn + ' - - 0 1';
 
-                // Valide la position avec chess.js
                 if (!game.load(fullFen)) {
                     alert('Position invalide ! Assurez-vous qu\'il y a un roi de chaque couleur.');
                     return;
                 }
 
-                // Réinitialise l'affichage
                 $('#engineStatus').text('Analyse en cours...');
                 $('#move1').text('1. (calcul...)');
                 $('#move2').text('2. (calcul...)');
                 $('#move3').text('3. (calcul...)');
-                bestMoves = {}; // Vide les anciens coups
+                bestMoves = {};
 
-                // Envoie la position au moteur Stockfish
                 stockfish.postMessage('position fen ' + fullFen);
-                // Lance l'analyse (profondeur 18, un bon compromis)
                 stockfish.postMessage('go depth 18'); 
             });
-
         });
     </script>
 
