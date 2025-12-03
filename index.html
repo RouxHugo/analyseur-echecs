@@ -32,6 +32,7 @@
             box-sizing: border-box;
         }
 
+        /* La zone des pièces de rechange est affichée par défaut avec sparePieces: true */
         .spare-pieces-7492f {
             border: 2px solid black;
             padding: 8px;
@@ -56,12 +57,12 @@
             background-color: #fff;
         }
 
-        #resetBtn, #analyzeBtn {
+        #resetBtn, #analyzeBtn, #clearBtn, #removeBtn { /* Ajout des nouveaux boutons */
             cursor: pointer;
             font-weight: bold;
         }
 
-        #resetBtn:hover, #analyzeBtn:hover {
+        #resetBtn:hover, #analyzeBtn:hover, #clearBtn:hover, #removeBtn:hover {
             background-color: #f5f5f5;
         }
 
@@ -84,6 +85,12 @@
             color: #555;
             margin-top: 10px;
         }
+        
+        /* Style pour indiquer le mode de suppression */
+        .remove-mode {
+            background-color: #ffcccc !important;
+            border: 2px solid red !important;
+        }
     </style>
 </head>
 <body>
@@ -94,10 +101,12 @@
         </div>
 
         <div class="sidebar">
-            <button id="resetBtn" class="sidebar-item">Reset Échiquier</button>
-
+            <button id="resetBtn" class="sidebar-item">Réinitialiser Position de Départ</button>
+            <button id="clearBtn" class="sidebar-item">Supprimer toutes les Pièces</button>
+            <button id="removeBtn" class="sidebar-item">Mode Retirer une Pièce</button>
+            
             <div class="sidebar-item tour-select">
-                <span>Tour:</span>
+                <span>Tour au Trait:</span>
                 <div>
                     <input type="radio" id="tourW" name="tour" value="w" checked>
                     <label for="tourW">Blanc</label>
@@ -127,8 +136,8 @@
             var board = null;
             var game = new Chess();
             var stockfish = new Worker('js/stockfish-17.1-lite-single-03e3232.js');
-            var bestMoves = {};
-
+            var removeMode = false; // Nouvel état pour le mode suppression
+            
             // ### Stockfish setup ###
             stockfish.postMessage('uci');
             stockfish.postMessage('setoption name MultiPV value 3');
@@ -136,7 +145,7 @@
 
             stockfish.onmessage = function(event) {
                 var message = event.data;
-                console.log(message);
+                // console.log(message); // Décommentez pour déboguer Stockfish
 
                 if (message === 'readyok') {
                     $('#engineStatus').text('Moteur prêt.');
@@ -149,7 +158,16 @@
                         var type = match[2];
                         var score = parseInt(match[3]);
                         var move = match[4];
-                        var scoreText = (type === 'cp') ? (score / 100).toFixed(2) : `Mat en ${score}`;
+                        
+                        // Si le score est en 'cp' (centipions), ajuster le signe si c'est le tour des Noirs
+                        if (type === 'cp') {
+                            var turn = $('input[name="tour"]:checked').val();
+                            var adjustedScore = (turn === 'b') ? -score : score;
+                            var scoreText = (adjustedScore / 100).toFixed(2);
+                        } else {
+                            var scoreText = `Mat en ${score}`;
+                        }
+                        
                         $('#move' + multipv).text(multipv + '. ' + move + ' (' + scoreText + ')');
                     }
                 }
@@ -159,50 +177,138 @@
                 }
             };
 
+            // ### Fonctions de gestion des pièces ###
+            
+            // Fonction appelée AVANT le dépôt d'une pièce
+            function onDragStart(source, piece, position, orientation) {
+                // Si le mode suppression est actif, on autorise le clic/déplacement de la pièce sur elle-même.
+                if (removeMode) {
+                    // On retourne true pour autoriser le drag
+                    return true; 
+                }
+                
+                // Pour le jeu standard ou le déplacement :
+                // La fonction ne fait rien car nous utilisons sparePieces et dropOffBoard: 'trash'
+                // La logique principale est gérée dans onPieceDrop.
+                return true; 
+            }
+            
+            // Fonction appelée APRÈS le dépôt d'une pièce
+            function onPieceDrop(source, target, piece, newPos, oldPos, orientation) {
+                // 1. Gestion du mode Suppression
+                if (removeMode) {
+                    // Si l'utilisateur a cliqué sur une case avec une pièce
+                    if (source === target) {
+                        // Vider la case (supprimer la pièce)
+                        var currentPos = board.position();
+                        delete currentPos[source];
+                        board.position(currentPos);
+                        
+                        // Sortir du mode suppression
+                        toggleRemoveMode();
+                        
+                        // On retourne 'snapback' juste pour annuler le drag, mais la position est déjà changée.
+                        return 'snapback'; 
+                    }
+                    // Si on a fait un drag and drop sur le trash (ce qui est déjà géré par dropOffBoard)
+                }
+                
+                // 2. Gestion de l'ajout/déplacement de pièces (pour sparePieces)
+                
+                // Si la pièce provient de la zone de pièces de rechange (source === 'spare')
+                if (source === 'spare' || target === 'trash') {
+                    // L'ajout ou la suppression est géré par 'dropOffBoard: "trash"' et 'sparePieces: true'.
+                    // On n'a pas besoin de faire de validation ici.
+                    return; 
+                }
+                
+                // 3. Gestion du déplacement normal de jeu (validation de chess.js)
+                
+                // Temporairement, essayez de déplacer la pièce dans l'objet Chess.js pour valider le mouvement
+                var tempGame = new Chess(board.fen());
+                
+                var move = tempGame.move({
+                    from: source,
+                    to: target,
+                    promotion: 'q' // Promotion par défaut à la Dame
+                });
+
+                // Si le mouvement est illégal selon chess.js (uniquement pour le drag & drop)
+                if (move === null) {
+                    // On ne fait rien si la pièce est retirée par 'dropOffBoard: trash' ou ajoutée par 'sparePieces'
+                    return 'snapback'; 
+                }
+            }
+            
+            // Fonction appelée APRES l'animation d'un déplacement
+            function onSnapEnd() {
+                // Mettre à jour l'objet game.js avec le FEN actuel pour qu'il corresponde au plateau (important pour l'analyse)
+                game.load(board.fen());
+            }
+
             // ### Chessboard configuration ###
             var config = {
-                draggable: true, 
-                position: 'start', 
-                sparePieces: true, 
-                dropOffBoard: 'trash', 
+                draggable: true,
+                position: 'start',
+                sparePieces: true,
+                dropOffBoard: 'trash', // Permet de retirer les pièces en les jetant
                 onDrop: onPieceDrop,
                 onSnapEnd: onSnapEnd,
-                // LIGNE CORRIGÉE : Utilisation du chemin local relatif pour le thème des pièces.
-                pieceTheme: 'img/wikipedia/{piece}.png' 
+                onDragStart: onDragStart, // Ajout de l'événement dragStart
+                pieceTheme: 'img/wikipedia/{piece}.png' // Chemin local corrigé
             };
             board = Chessboard('echiquier', config);
 
-            // Déplacement des pièces (board et spare)
-            function onPieceDrop(source, target, piece, newPos, oldPos, orientation) {
-                var move = game.move({
-                    from: source,
-                    to: target,
-                    promotion: 'q'
-                });
-                if (move === null) return 'snapback';
-            }
-
-            // Synchronisation après le déplacement
-            function onSnapEnd() {
-                board.position(game.fen());
-            }
-
-            // ### Boutons ###
+            // ### Fonctions des Boutons ###
+            
+            // 1. Bouton Reset
             $('#resetBtn').on('click', function() {
                 board.start();
-                game.reset();
+                game.reset(); // Réinitialise l'objet game.js
+                updateStatusDisplay();
+                if (removeMode) toggleRemoveMode();
+            });
+            
+            // 2. Bouton Supprimer tout
+            $('#clearBtn').on('click', function() {
+                board.clear();
+                game.load('8/8/8/8/8/8/8/8 w - - 0 1'); // Met à jour l'objet game.js à un plateau vide
+                updateStatusDisplay();
+                if (removeMode) toggleRemoveMode();
+            });
+            
+            // 3. Bouton Mode Retirer une Pièce
+            $('#removeBtn').on('click', toggleRemoveMode);
+            
+            function toggleRemoveMode() {
+                removeMode = !removeMode;
+                if (removeMode) {
+                    $('#removeBtn').addClass('remove-mode').text('Mode Suppression (ACTIF)');
+                    $('#echiquier').css('cursor', 'crosshair');
+                } else {
+                    $('#removeBtn').removeClass('remove-mode').text('Mode Retirer une Pièce');
+                    $('#echiquier').css('cursor', 'grab');
+                }
+            }
+
+            // Fonction pour réinitialiser l'affichage de l'analyse
+            function updateStatusDisplay() {
                 $('#move1').text('1. (en attente)');
                 $('#move2').text('2. (en attente)');
                 $('#move3').text('3. (en attente)');
                 $('#engineStatus').text('Moteur prêt.');
-            });
+            }
 
+            // 4. Bouton Analyse
             $('#analyzeBtn').on('click', function() {
                 var fen = board.fen();
                 var turn = $('input[name="tour"]:checked').val();
-                var fullFen = fen + ' ' + turn + ' - - 0 1';
-
-                if (!game.load(fullFen)) {
+                
+                // Construire un FEN complet pour l'analyse
+                // Le FEN du board.fen() ne contient pas le côté à jouer, les castlings, etc.
+                var currentFen = fen + ' ' + turn + ' - - 0 1';
+                
+                if (!game.load(currentFen)) {
                     alert('Position invalide ! Assurez-vous qu\'il y a un roi de chaque couleur.');
                     return;
                 }
@@ -211,10 +317,11 @@
                 $('#move1').text('1. (calcul...)');
                 $('#move2').text('2. (calcul...)');
                 $('#move3').text('3. (calcul...)');
-                bestMoves = {};
-
-                stockfish.postMessage('position fen ' + fullFen);
-                stockfish.postMessage('go depth 18'); 
+                
+                // Mettre à jour l'état du moteur et lancer l'analyse
+                stockfish.postMessage('stop'); // Arrêter toute analyse précédente
+                stockfish.postMessage('position fen ' + currentFen);
+                stockfish.postMessage('go depth 18');
             });
         });
     </script>
