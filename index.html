@@ -160,16 +160,17 @@
             };
 
             // ### Chessboard configuration ###
-            var config = {
-                draggable: true, 
-                position: 'start', 
-                sparePieces: true, 
-                dropOffBoard: 'trash', 
-                onDrop: onPieceDrop,
-                onSnapEnd: onSnapEnd,
-                pieceTheme: 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/img/chesspieces/alpha/{piece}.png'
-            };
-            board = Chessboard('echiquier', config);
+            // ### Chessboard configuration ###
+            var config = {
+                draggable: true, 
+                position: 'start', 
+                sparePieces: true, 
+                dropOffBoard: 'trash', 
+                onDrop: onPieceDrop,
+                onSnapEnd: onSnapEnd,
+                pieceTheme: 'https://raw.githubusercontent.com/chrisoakman/chessboardjs/master/img/chesspieces/wikipedia/{piece}.png' // <-- LIGNE MODIFIÉE
+            };
+            board = Chessboard('echiquier', config);
 
             // Déplacement des pièces (board et spare)
             function onPieceDrop(source, target, piece, newPos, oldPos, orientation) {
@@ -220,3 +221,4 @@
 
 </body>
 </html>
+
