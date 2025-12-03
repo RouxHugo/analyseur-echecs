@@ -160,17 +160,17 @@
             };
 
             // ### Chessboard configuration ###
-            // ### Chessboard configuration ###
-            var config = {
-                draggable: true, 
-                position: 'start', 
-                sparePieces: true, 
-                dropOffBoard: 'trash', 
-                onDrop: onPieceDrop,
-                onSnapEnd: onSnapEnd,
-                pieceTheme: 'https://raw.githubusercontent.com/chrisoakman/chessboardjs/master/img/chesspieces/wikipedia/{piece}.png' // <-- LIGNE MODIFIÉE
-            };
-            board = Chessboard('echiquier', config);
+            var config = {
+                draggable: true, 
+                position: 'start', 
+                sparePieces: true, 
+                dropOffBoard: 'trash', 
+                onDrop: onPieceDrop,
+                onSnapEnd: onSnapEnd,
+                // LIGNE CORRIGÉE : Utilisation du chemin local relatif pour le thème des pièces.
+                pieceTheme: 'img/wikipedia/{piece}.png' 
+            };
+            board = Chessboard('echiquier', config);
 
             // Déplacement des pièces (board et spare)
             function onPieceDrop(source, target, piece, newPos, oldPos, orientation) {
@@ -221,4 +221,3 @@
 
 </body>
 </html>
-
