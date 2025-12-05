@@ -127,7 +127,7 @@
         </div>
     </div>
 
-   <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.min.js"></script>
 
@@ -179,6 +179,15 @@
                 }
             };
 
+            // Fonction pour basculer le bouton radio de tour
+            function toggleTurn() {
+                var currentTurn = $('input[name="tour"]:checked').val();
+                var nextTurn = (currentTurn === 'w') ? 'b' : 'w';
+                
+                // Mettre à jour l'input radio pour le prochain tour et déclencher la synchro via .on('change')
+                $('#tour' + nextTurn.toUpperCase()).prop('checked', true).trigger('change');
+            }
+
             // ### Fonctions de gestion des pièces ###
 
             // Autorise le drag
@@ -227,7 +236,8 @@
                     return 'snapback'; 
                 }
                 
-                // Si le mouvement est légal, on laisse la pièce à l'endroit, et onsnapEnd mettra à jour 'game'.
+                // 4. NOUVEAU : Le mouvement est légal, on change automatiquement le tour
+                toggleTurn(); 
             }
 
             // Fonction appelée APRES l'animation d'un déplacement (point de synchronisation crucial)
@@ -250,6 +260,9 @@
                 pieceTheme: 'img/wikipedia/{piece}.png'
             };
             board = Chessboard('echiquier', config);
+            
+            // Synchronisation initiale
+            onSnapEnd();
 
             // ### Fonctions des Boutons ###
 
@@ -327,4 +340,3 @@
 
 </body>
 </html>
-
