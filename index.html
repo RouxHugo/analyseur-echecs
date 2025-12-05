@@ -78,6 +78,8 @@
             font-size: 15px;
             text-align: left;
             padding-left: 20px;
+            /* Rendre cliquable pour une éventuelle flèche future */
+            cursor: pointer; 
         }
 
         #engineStatus {
@@ -145,7 +147,6 @@
 
             stockfish.onmessage = function(event) {
                 var message = event.data;
-                // Décommentez ceci pour voir toutes les lignes de Stockfish pour le débogage:
                 // console.log(message); 
 
                 if (message === 'readyok') {
@@ -164,7 +165,7 @@
                     var multipv = extractValue('multipv');
                     var scoreType = extractValue('score');
                     var scoreValue = extractValue(scoreType);
-                    var pvSequence = extractValue('pv'); // Capture toute la séquence 'pv'
+                    var pvSequence = extractValue('pv'); 
 
                     if (multipv && scoreType && scoreValue && pvSequence) {
                         multipv = parseInt(multipv);
@@ -177,14 +178,13 @@
                         // Traitement de l'affichage du score
                         if (scoreType === 'cp') {
                             var turn = $('input[name="tour"]:checked').val();
-                            // Inverser le score pour les Noirs car Stockfish donne le score du point de vue du joueur au trait.
                             var adjustedScore = (turn === 'b') ? -scoreValue : scoreValue; 
                             var scoreText = (adjustedScore / 100).toFixed(2);
                         } else {
                             scoreText = `Mat en ${scoreValue}`;
                         }
                         
-                        // Assurer que nous mettons à jour les 3 emplacements
+                        // Afficher les résultats (corrigé pour garantir l'affichage du coup)
                         if (multipv >= 1 && multipv <= 3) {
                             $('#move' + multipv)
                                 .text(multipv + '. ' + move + ' (' + scoreText + ')')
@@ -203,26 +203,16 @@
                 var currentTurn = $('input[name="tour"]:checked').val();
                 var nextTurn = (currentTurn === 'w') ? 'b' : 'w';
                 
-                // Mettre à jour l'input radio pour le prochain tour et déclencher la synchro via .on('change')
                 $('#tour' + nextTurn.toUpperCase()).prop('checked', true).trigger('change');
             }
             
-            // --- NOUVELLE FONCTION POUR LA FLÈCHE ---
-            function drawArrow(move) {
-                // S'assurer qu'il y a un coup (ex: 'e2e4') et non un simple 'none' ou un nombre
-                if (typeof move === 'string' && move.length === 4) { 
-                    // Nettoyer les anciennes flèches avant d'en dessiner une nouvelle
-                    board.removeArrows();
-                    
-                    const from = move.substring(0, 2);
-                    const to = move.substring(2, 4);
-                    
-                    // Dessiner une flèche rouge pour le meilleur coup
-                    board.setArrows([[from, to, 'red']]);
-                } else {
-                    board.removeArrows();
-                }
+            // --- FONCTION POUR LA FLÈCHE (désactivée/à implémenter si besoin d'un plugin) ---
+            /* function drawArrow(move) {
+                // Cette fonction nécessite un plugin tiers pour chessboard.js
+                // Pour l'instant, elle est laissée vide pour éviter l'erreur "not a function"
+                console.warn("La fonction drawArrow() nécessite un plugin tiers pour chessboard.js.");
             }
+            */
             // ----------------------------------------
 
 
@@ -236,8 +226,8 @@
             // Fonction appelée APRÈS le dépôt d'une pièce
             function onPieceDrop(source, target, piece, newPos, oldPos, orientation) {
                 
-                // Nettoyer la flèche après tout mouvement sur l'échiquier
-                board.removeArrows();
+                // Si la flèche était active, nous la retirons ici, mais board.removeArrows n'existe pas.
+                // board.removeArrows();
 
                 // 1. Gestion du mode Suppression
                 if (removeMode) {
@@ -246,25 +236,24 @@
                         delete currentPos[source];
                         board.position(currentPos);
                         toggleRemoveMode();
-                        // Retourner 'snapback' pour éviter que chessboardjs n'essaie de faire un drag normal
                         return 'snapback';
                     }
                 }
                 
                 // 2. Gestion de l'ajout/retrait depuis sparePieces ou dropOffBoard: 'trash'
                 if (source === 'spare' || target === 'trash') {
-                    // L'action est gérée par les options de configuration.
-                    // On laisse faire et on mettra à jour l'état de 'game' dans onSnapEnd.
+                    // Si on vient d'ajouter ou de retirer (trash), on laisse faire l'action de chessboard.js
+                    // et on ne bascule PAS le tour.
+                    onSnapEnd(); // Synchroniser l'état après ajout/retrait
                     return; 
                 }
                 
                 // 3. Gestion du déplacement normal de jeu
                 
-                // On charge le FEN dans un objet temporaire, MAIS avec le côté à jouer pour la validation
                 var turn = $('input[name="tour"]:checked').val();
                 var fullFen = board.fen() + ' ' + turn + ' - - 0 1';
                 var tempGame = new Chess();
-                tempGame.load(fullFen); // Charger avec le côté à jouer
+                tempGame.load(fullFen);
 
                 var move = tempGame.move({
                     from: source,
@@ -277,13 +266,12 @@
                     return 'snapback'; 
                 }
                 
-                // 4. Le mouvement est légal, on change automatiquement le tour
+                // 4. Si le mouvement est légal, on bascule le tour
                 toggleTurn(); 
             }
 
             // Fonction appelée APRES l'animation d'un déplacement (point de synchronisation crucial)
             function onSnapEnd() {
-                // Mettre à jour l'objet game.js avec le FEN du plateau et le côté au trait sélectionné
                 var turn = $('input[name="tour"]:checked').val();
                 var currentFen = board.fen() + ' ' + turn + ' - - 0 1';
                 game.load(currentFen);
@@ -298,7 +286,7 @@
                 onDrop: onPieceDrop,
                 onSnapEnd: onSnapEnd,
                 onDragStart: onDragStart,
-                pieceTheme: 'img/wikipedia/{piece}.png' // NÉCESSITE LE DOSSIER img/wikipedia/ LOCALEMENT
+                pieceTheme: 'img/wikipedia/{piece}.png' 
             };
             board = Chessboard('echiquier', config);
             
@@ -312,7 +300,7 @@
                 board.start();
                 game.reset(); 
                 updateStatusDisplay();
-                board.removeArrows();
+                // board.removeArrows();
                 if (removeMode) toggleRemoveMode();
             });
 
@@ -321,7 +309,7 @@
                 board.clear();
                 game.load('8/8/8/8/8/8/8/8 w - - 0 1'); 
                 updateStatusDisplay();
-                board.removeArrows();
+                // board.removeArrows();
                 if (removeMode) toggleRemoveMode();
             });
 
@@ -352,7 +340,6 @@
 
             // 4. Bouton Analyse
             $('#analyzeBtn').on('click', function() {
-                // S'assurer que 'game' est synchronisé avec le dernier FEN + côté à jouer.
                 onSnapEnd(); 
                 var currentFen = game.fen();
                 
@@ -372,12 +359,13 @@
                 stockfish.postMessage('go depth 18');
             });
             
-            // --- NOUVEL ÉVÉNEMENT : Dessiner la flèche au double-clic sur le meilleur coup ---
+            // ÉVÉNEMENT DOUBLE-CLIC DÉSACTIVÉ JUSQU'À CE QUE LA FONCTION DE FLÈCHE SOIT IMPLÉMENTÉE
+            /*
             $('#move1').on('dblclick', function() {
                 const bestMove = $(this).attr('data-move');
                 drawArrow(bestMove);
             });
-            // -----------------------------------------------------------------------------------
+            */
         });
     </script>
 
