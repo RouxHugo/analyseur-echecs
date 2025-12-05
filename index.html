@@ -134,7 +134,6 @@
     <script>
         $(document).ready(function() {
             var board = null;
-            // On utilise game pour l'analyse, mais sa position est mise à jour manuellement.
             var game = new Chess(); 
             var stockfish = new Worker('js/stockfish-17.1-lite-single-03e3232.js');
             var removeMode = false;
@@ -165,28 +164,31 @@
                     var multipv = extractValue('multipv');
                     var scoreType = extractValue('score');
                     var scoreValue = extractValue(scoreType);
-                    var move = extractValue('pv'); // 'pv' est suivi de la séquence de coups
+                    var pvSequence = extractValue('pv'); // Capture toute la séquence 'pv'
 
-                    if (multipv && scoreType && scoreValue && move) {
+                    if (multipv && scoreType && scoreValue && pvSequence) {
                         multipv = parseInt(multipv);
                         scoreValue = parseInt(scoreValue);
                         
-                        // Traitement de l'affichage
+                        // Le coup à afficher est toujours le premier de la séquence PV
+                        var move = pvSequence.split(' ')[0];
+                        var scoreText = '';
+                        
+                        // Traitement de l'affichage du score
                         if (scoreType === 'cp') {
                             var turn = $('input[name="tour"]:checked').val();
                             // Inverser le score pour les Noirs car Stockfish donne le score du point de vue du joueur au trait.
                             var adjustedScore = (turn === 'b') ? -scoreValue : scoreValue; 
                             var scoreText = (adjustedScore / 100).toFixed(2);
                         } else {
-                            // Le move dans 'pv' est la séquence, on prend juste le premier coup
-                            var firstMove = move.split(' ')[0];
-                            var scoreText = `Mat en ${scoreValue}`;
-                            move = firstMove; 
+                            scoreText = `Mat en ${scoreValue}`;
                         }
                         
                         // Assurer que nous mettons à jour les 3 emplacements
                         if (multipv >= 1 && multipv <= 3) {
-                            $('#move' + multipv).text(multipv + '. ' + move + ' (' + scoreText + ')');
+                            $('#move' + multipv)
+                                .text(multipv + '. ' + move + ' (' + scoreText + ')')
+                                .attr('data-move', move);
                         }
                     }
                 }
@@ -204,6 +206,25 @@
                 // Mettre à jour l'input radio pour le prochain tour et déclencher la synchro via .on('change')
                 $('#tour' + nextTurn.toUpperCase()).prop('checked', true).trigger('change');
             }
+            
+            // --- NOUVELLE FONCTION POUR LA FLÈCHE ---
+            function drawArrow(move) {
+                // S'assurer qu'il y a un coup (ex: 'e2e4') et non un simple 'none' ou un nombre
+                if (typeof move === 'string' && move.length === 4) { 
+                    // Nettoyer les anciennes flèches avant d'en dessiner une nouvelle
+                    board.removeArrows();
+                    
+                    const from = move.substring(0, 2);
+                    const to = move.substring(2, 4);
+                    
+                    // Dessiner une flèche rouge pour le meilleur coup
+                    board.setArrows([[from, to, 'red']]);
+                } else {
+                    board.removeArrows();
+                }
+            }
+            // ----------------------------------------
+
 
             // ### Fonctions de gestion des pièces ###
 
@@ -215,6 +236,9 @@
             // Fonction appelée APRÈS le dépôt d'une pièce
             function onPieceDrop(source, target, piece, newPos, oldPos, orientation) {
                 
+                // Nettoyer la flèche après tout mouvement sur l'échiquier
+                board.removeArrows();
+
                 // 1. Gestion du mode Suppression
                 if (removeMode) {
                     if (source === target) {
@@ -229,7 +253,7 @@
                 
                 // 2. Gestion de l'ajout/retrait depuis sparePieces ou dropOffBoard: 'trash'
                 if (source === 'spare' || target === 'trash') {
-                    // L'ajout ou le retrait est géré par les options de configuration.
+                    // L'action est gérée par les options de configuration.
                     // On laisse faire et on mettra à jour l'état de 'game' dans onSnapEnd.
                     return; 
                 }
@@ -274,7 +298,7 @@
                 onDrop: onPieceDrop,
                 onSnapEnd: onSnapEnd,
                 onDragStart: onDragStart,
-                pieceTheme: 'img/wikipedia/{piece}.png'
+                pieceTheme: 'img/wikipedia/{piece}.png' // NÉCESSITE LE DOSSIER img/wikipedia/ LOCALEMENT
             };
             board = Chessboard('echiquier', config);
             
@@ -288,6 +312,7 @@
                 board.start();
                 game.reset(); 
                 updateStatusDisplay();
+                board.removeArrows();
                 if (removeMode) toggleRemoveMode();
             });
 
@@ -296,6 +321,7 @@
                 board.clear();
                 game.load('8/8/8/8/8/8/8/8 w - - 0 1'); 
                 updateStatusDisplay();
+                board.removeArrows();
                 if (removeMode) toggleRemoveMode();
             });
 
@@ -315,9 +341,9 @@
 
             // Fonction pour réinitialiser l'affichage de l'analyse
             function updateStatusDisplay() {
-                $('#move1').text('1. (en attente)');
-                $('#move2').text('2. (en attente)');
-                $('#move3').text('3. (en attente)');
+                $('#move1').text('1. (en attente)').removeAttr('data-move');
+                $('#move2').text('2. (en attente)').removeAttr('data-move');
+                $('#move3').text('3. (en attente)').removeAttr('data-move');
                 $('#engineStatus').text('Moteur prêt.');
             }
             
@@ -330,14 +356,8 @@
                 onSnapEnd(); 
                 var currentFen = game.fen();
                 
-                if (game.in_checkmate()) {
-                     $('#engineStatus').text('Partie terminée: Échec et Mat!');
-                     updateStatusDisplay();
-                     return;
-                }
-                
-                if (game.in_draw()) {
-                     $('#engineStatus').text('Partie terminée: Nulle (Pat, Répétition, Matériel Insuffisant, etc.)');
+                if (game.in_checkmate() || game.in_draw()) {
+                     $('#engineStatus').text('Partie terminée (Mat ou Nulle).');
                      updateStatusDisplay();
                      return;
                 }
@@ -347,11 +367,17 @@
                 $('#move2').text('2. (calcul...)');
                 $('#move3').text('3. (calcul...)');
 
-                // Mettre à jour l'état du moteur et lancer l'analyse
                 stockfish.postMessage('stop'); 
                 stockfish.postMessage('position fen ' + currentFen);
                 stockfish.postMessage('go depth 18');
             });
+            
+            // --- NOUVEL ÉVÉNEMENT : Dessiner la flèche au double-clic sur le meilleur coup ---
+            $('#move1').on('dblclick', function() {
+                const bestMove = $(this).attr('data-move');
+                drawArrow(bestMove);
+            });
+            // -----------------------------------------------------------------------------------
         });
     </script>
 
