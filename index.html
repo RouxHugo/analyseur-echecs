@@ -147,7 +147,7 @@
 
             stockfish.onmessage = function(event) {
                 var message = event.data;
-                // console.log(message); 
+                // console.log(message); // Décommentez ceci pour voir toutes les lignes de Stockfish pour le débogage:
 
                 if (message === 'readyok') {
                     $('#engineStatus').text('Moteur prêt.');
@@ -179,7 +179,7 @@
                         if (scoreType === 'cp') {
                             var turn = $('input[name="tour"]:checked').val();
                             var adjustedScore = (turn === 'b') ? -scoreValue : scoreValue; 
-                            var scoreText = (adjustedScore / 100).toFixed(2);
+                            var scoreText = `${(adjustedScore / 100).toFixed(2)} cp`;
                         } else {
                             scoreText = `Mat en ${scoreValue}`;
                         }
@@ -206,16 +206,6 @@
                 $('#tour' + nextTurn.toUpperCase()).prop('checked', true).trigger('change');
             }
             
-            // --- FONCTION POUR LA FLÈCHE (désactivée/à implémenter si besoin d'un plugin) ---
-            /* function drawArrow(move) {
-                // Cette fonction nécessite un plugin tiers pour chessboard.js
-                // Pour l'instant, elle est laissée vide pour éviter l'erreur "not a function"
-                console.warn("La fonction drawArrow() nécessite un plugin tiers pour chessboard.js.");
-            }
-            */
-            // ----------------------------------------
-
-
             // ### Fonctions de gestion des pièces ###
 
             // Autorise le drag
@@ -226,9 +216,6 @@
             // Fonction appelée APRÈS le dépôt d'une pièce
             function onPieceDrop(source, target, piece, newPos, oldPos, orientation) {
                 
-                // Si la flèche était active, nous la retirons ici, mais board.removeArrows n'existe pas.
-                // board.removeArrows();
-
                 // 1. Gestion du mode Suppression
                 if (removeMode) {
                     if (source === target) {
@@ -242,9 +229,8 @@
                 
                 // 2. Gestion de l'ajout/retrait depuis sparePieces ou dropOffBoard: 'trash'
                 if (source === 'spare' || target === 'trash') {
-                    // Si on vient d'ajouter ou de retirer (trash), on laisse faire l'action de chessboard.js
-                    // et on ne bascule PAS le tour.
-                    onSnapEnd(); // Synchroniser l'état après ajout/retrait
+                    // Si on vient d'ajouter ou de retirer (trash), on synchronise l'état et on s'arrête.
+                    onSnapEnd();
                     return; 
                 }
                 
@@ -300,7 +286,6 @@
                 board.start();
                 game.reset(); 
                 updateStatusDisplay();
-                // board.removeArrows();
                 if (removeMode) toggleRemoveMode();
             });
 
@@ -309,7 +294,6 @@
                 board.clear();
                 game.load('8/8/8/8/8/8/8/8 w - - 0 1'); 
                 updateStatusDisplay();
-                // board.removeArrows();
                 if (removeMode) toggleRemoveMode();
             });
 
@@ -359,13 +343,7 @@
                 stockfish.postMessage('go depth 18');
             });
             
-            // ÉVÉNEMENT DOUBLE-CLIC DÉSACTIVÉ JUSQU'À CE QUE LA FONCTION DE FLÈCHE SOIT IMPLÉMENTÉE
-            /*
-            $('#move1').on('dblclick', function() {
-                const bestMove = $(this).attr('data-move');
-                drawArrow(bestMove);
-            });
-            */
+            // Le système de flèches nécessitant un plugin tiers a été retiré pour éviter l'erreur fatale.
         });
     </script>
 
