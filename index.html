@@ -146,6 +146,7 @@
 
             stockfish.onmessage = function(event) {
                 var message = event.data;
+                // Décommentez ceci pour voir toutes les lignes de Stockfish pour le débogage:
                 // console.log(message); 
 
                 if (message === 'readyok') {
@@ -153,24 +154,40 @@
                 }
 
                 if (message.startsWith('info') && message.includes('multipv')) {
-                    var match = message.match(/multipv (\d+) score (cp|mate) (-?\d+) pv (\w+)/);
-                    if (match) {
-                        var multipv = parseInt(match[1]);
-                        var type = match[2];
-                        var score = parseInt(match[3]);
-                        var move = match[4];
+                    
+                    // Fonction utilitaire pour extraire la valeur d'une clé (ex: 'multipv', 'score', 'pv')
+                    const extractValue = (key) => {
+                        const regex = new RegExp(key + ' (\\S+)');
+                        const result = message.match(regex);
+                        return result ? result[1] : null;
+                    };
+                    
+                    var multipv = extractValue('multipv');
+                    var scoreType = extractValue('score');
+                    var scoreValue = extractValue(scoreType);
+                    var move = extractValue('pv'); // 'pv' est suivi de la séquence de coups
+
+                    if (multipv && scoreType && scoreValue && move) {
+                        multipv = parseInt(multipv);
+                        scoreValue = parseInt(scoreValue);
                         
-                        // Si le score est en 'cp' (centipions), ajuster le signe si c'est le tour des Noirs
-                        if (type === 'cp') {
+                        // Traitement de l'affichage
+                        if (scoreType === 'cp') {
                             var turn = $('input[name="tour"]:checked').val();
                             // Inverser le score pour les Noirs car Stockfish donne le score du point de vue du joueur au trait.
-                            var adjustedScore = (turn === 'b') ? -score : score; 
+                            var adjustedScore = (turn === 'b') ? -scoreValue : scoreValue; 
                             var scoreText = (adjustedScore / 100).toFixed(2);
                         } else {
-                            var scoreText = `Mat en ${score}`;
+                            // Le move dans 'pv' est la séquence, on prend juste le premier coup
+                            var firstMove = move.split(' ')[0];
+                            var scoreText = `Mat en ${scoreValue}`;
+                            move = firstMove; 
                         }
                         
-                        $('#move' + multipv).text(multipv + '. ' + move + ' (' + scoreText + ')');
+                        // Assurer que nous mettons à jour les 3 emplacements
+                        if (multipv >= 1 && multipv <= 3) {
+                            $('#move' + multipv).text(multipv + '. ' + move + ' (' + scoreText + ')');
+                        }
                     }
                 }
 
@@ -178,7 +195,7 @@
                     $('#engineStatus').text('Analyse terminée.');
                 }
             };
-
+            
             // Fonction pour basculer le bouton radio de tour
             function toggleTurn() {
                 var currentTurn = $('input[name="tour"]:checked').val();
@@ -236,7 +253,7 @@
                     return 'snapback'; 
                 }
                 
-                // 4. NOUVEAU : Le mouvement est légal, on change automatiquement le tour
+                // 4. Le mouvement est légal, on change automatiquement le tour
                 toggleTurn(); 
             }
 
